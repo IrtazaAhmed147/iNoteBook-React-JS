@@ -8,3 +8,5 @@ const connectToMongo = () => {
 }
 
 module.exports = connectToMongo;
+
+// /?readPreference=primary&appname=MongoDB%20Compass&directConnection=true&ssl=false
