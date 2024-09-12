@@ -1,16 +1,18 @@
 const express = require('express')
 const User = require('../models/User')
-const { body, validationResult } = require('express-validator');
 const router = express.Router()
+const { body, validationResult } = require('express-validator');
+const bcrypt = require('bcryptjs');
+var jwt = require('jsonwebtoken');
 
-
+const JWT_SECRET = "irtazaisagoodbo$y"
 // create a user using POST "/api/auth/createuser", No login required
-router.post('/createuser',[
-   body('name', 'enter a name').isLength({min: 3}),
+router.post('/createuser', [
+   body('name', 'enter a name').isLength({ min: 3 }),
    body('email', 'enter a valid email').isEmail(),
-   body('password', 'password length should be greater than 5 characters').isLength({min: 5}),
+   body('password', 'password length should be greater than 5 characters').isLength({ min: 5 }),
 
-], async (req, res)=>{
+], async (req, res) => {
    //if there are error return bad request and the error
 
 
@@ -20,28 +22,43 @@ router.post('/createuser',[
    // user.save()
 
    const errors = validationResult(req);
-   if(!errors.isEmpty()) {
-      return res.status(400).json({errors: errors.array() })
+   if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() })
    }
 
-   // check weather the user with this email exist already
-   let user = await User.findOne({email: req.body.email});
-   if (user) {
-      return res.status(400).json({error: "Sorry a email with this email already exists"})
-   }
- user = await User.create({
-      name: req.body.name,
-      password: req.body.password,
-      email: req.body.email,
-    })
-    
-    
-   //  .then(user => res.json(user))
-   //  .catch(err => {console.log("err")
-   //    res.json({error: "please enter a unique value"})})
+   try {
 
-   // res.send(req.body)
-   res.json({user})
+
+      // check weather the user with this email exist already
+      let user = await User.findOne({ email: req.body.email });
+      if (user) {
+         return res.status(400).json({ error: "Sorry a email with this email already exists" })
+      }
+      const salt = await bcrypt.genSalt(10);
+      const secPass = await bcrypt.hash(req.body.password, salt)
+
+      user = await User.create({
+         name: req.body.name,
+         password: secPass,
+         email: req.body.email,
+      })
+      const data = {
+         user:{
+
+            id: user.id
+         }
+      }
+      const authToken = jwt.sign(data, JWT_SECRET);
+      console.log(authToken)
+
+
+      
+      res.json({ authToken })
+   } catch (error) {
+      console.log(error.message)
+      res.status(500).send("some error occur")
+   }
+
 })
 
 module.exports = router
